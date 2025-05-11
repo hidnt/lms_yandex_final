@@ -149,7 +149,7 @@
 
 ## Чтобы запустить программу, необходимо:
 ### **Введите это в git bash:**
-1) Скачать актуальную версию `git clone git@github.com:hidnt/calc_go_yandex_2.git`
+1) Скачать актуальную версию `git clone git@github.com:hidnt/lms_yandex_final.git`
 2) Перейти в созданную папку `cd lms_yandex_final`
 3) Запустить orchestrator `go run ./cmd/orchestrator/main.go`
 4) Запустить agent `go run ./cmd/agent/main.go`
