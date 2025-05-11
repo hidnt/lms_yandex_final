@@ -370,11 +370,10 @@ func (h *CalcHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		expr.Status = fmt.Sprint(err)
-		database.InsertExpression(context.TODO(), h.db, userID, &expr)
-		return
+	} else {
+		w.WriteHeader(http.StatusCreated)
 	}
 
-	w.WriteHeader(http.StatusCreated)
 	exprID, _ := database.InsertExpression(context.TODO(), h.db, userID, &expr)
 	for _, a := range expr.Actions {
 		database.InsertActions(context.TODO(), h.db, exprID, userID, &a)

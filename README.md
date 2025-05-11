@@ -216,12 +216,6 @@ TIME_DIVISIONS_MS - время выполнения операции делен�
 
 `curl -X POST -H "Content-Type: application/json" -d "" http://localhost:8080/api/v1/calculate`
 
-Возвращает
-
-    {
-        "id": 1
-    }
-
 Код 500.
 
 ---
