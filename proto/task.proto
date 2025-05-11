@@ -1,0 +1,28 @@
+syntax = "proto3";
+package task;
+option go_package = "./test_project";
+
+message TaskRequest {
+    int64 ID = 1;
+    int64 ExpressionId = 2;
+    int64 UserID = 3;
+    double Arg1 = 4;
+    double Arg2 = 5;
+    string Operation = 6;
+    int32 OperationTime = 7;
+}
+
+message TaskResponse {
+    int64 ID = 1;
+    int64 ExpressionId = 2;
+    int64 UserID = 3;
+    bool Error = 4;
+    double Res = 5;
+}
+
+message Empty {}
+
+service Orchestrator {
+    rpc SetResult(TaskResponse) returns (Empty) {};
+    rpc GetTask(Empty) returns (TaskRequest) {};
+}
