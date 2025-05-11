@@ -181,7 +181,9 @@ func StartOrchestrator() {
 		log.Println("failed to open .env")
 		os.Exit(1)
 	}
-	port := os.Getenv("PORT")
+
+	portHTTP := os.Getenv("PORT_HTTP")
+	portGRPC := os.Getenv("PORT_GRPC")
 
 	db, err := sql.Open("sqlite3", "./database/store.db")
 	if err != nil {
@@ -201,7 +203,7 @@ func StartOrchestrator() {
 		log.Fatal(err)
 	}
 
-	go StartGRPC(port, db)
+	go StartGRPC(portGRPC, db)
 
 	signUpHandler := &SignUpHandler{db: db}
 	signInHandler := &SignInHandler{db: db}
@@ -215,8 +217,10 @@ func StartOrchestrator() {
 	http.Handle("/api/v1/expressions", AuthMiddleware(expressionsHandler.ServeHTTP))
 	http.Handle("/api/v1/expressions/", AuthMiddleware(expressionsIdHandler.ServeHTTP))
 
-	log.Printf("Запущен сервер на :%s", port)
-	http.ListenAndServe(":"+port, nil)
+	http.Handle("/api/v1/", http.StripPrefix("/api/v1", http.FileServer(http.Dir("./static"))))
+
+	log.Printf("Запущен сервер на :%s", portHTTP)
+	http.ListenAndServe(":"+portHTTP, nil)
 }
 
 func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {

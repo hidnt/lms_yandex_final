@@ -22,7 +22,7 @@ func StartAgents() {
 		os.Exit(1)
 	}
 
-	port := os.Getenv("PORT")
+	port := os.Getenv("PORT_GRPC")
 	n := os.Getenv("COMPUTING_POWER")
 	computing_power, err := strconv.Atoi(n)
 	if err != nil {

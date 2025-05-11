@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Калькулятор выражений</title>
+    <style>
+        :root {
+            --bg: #1a1a1a;
+            --text: #e0e0e0;
+            --primary: #4a90e2;
+            --border: #404040;
+            --card-bg: #2d2d2d;
+            --error: #e74c3c;
+            --success: #2ecc71;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        input, textarea {
+            background: #333;
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 8px;
+            width: 100%;
+            margin: 5px 0;
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error-message {
+            color: var(--error);
+            margin-top: 10px;
+        }
+
+        .expression-item {
+            padding: 10px;
+            margin: 5px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status {
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+
+        .completed { background: var(--success); }
+        .pending { background: #f1c40f; }
+        .error { background: var(--error); }
+
+        .jwt-display {
+            word-wrap: break-word;
+            text-align: center;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Секция аутентификации -->
+        <div class="card" id="authSection">
+            <input type="text" id="username" placeholder="Логин">
+            <input type="password" id="password" placeholder="Пароль">
+            <button onclick="loginWithPassword()">Войти</button>
+            <button onclick="register()">Регистрация</button>
+
+            <div style="margin-top: 20px;">
+                <textarea id="jwtInput" placeholder="Вставьте JWT токен" rows="2"></textarea>
+                <button onclick="loginWithJWT()">Войти по JWT</button>
+            </div>
+
+            <div id="authError" class="error-message"></div>
+        </div>
+
+        <!-- Основной интерфейс -->
+        <div class="hidden" id="mainInterface">
+            <div class="card">
+                <strong>Ваш JWT:</strong> 
+                <div class="jwt-display" id="jwtToken"></div>
+            </div>
+
+            <div class="card">
+                <h2>Новое выражение</h2>
+                <input type="text" id="expression" placeholder="1+2*3">
+                <button onclick="submitExpression()">Отправить</button>
+                <div id="submitResult"></div>
+            </div>
+
+            <div class="card">
+                <h2>Выражения <button onclick="loadExpressions()">Вывести всё</button></h2>
+                <div id="expressionsList"></div>
+            </div>
+
+            <div class="card">
+                <h2>Поиск по ID</h2>
+                <input type="text" id="searchId" placeholder="Введите ID">
+                <button onclick="searchById()">Найти</button>
+                <div id="searchResult"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentJwt = '';
+
+        async function makeRequest(url, method, body) {
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': currentJwt ? `Bearer ${currentJwt}` : ''
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers,
+                    body: body ? JSON.stringify(body) : null
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.message || 'Ошибка сервера');
+                }
+                return data;
+            } catch (error) {
+                throw new Error(error.message);
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('authError');
+
+            await makeRequest('/api/v1/register', 'POST', {
+                login: username,
+                password: password
+            });
+        }
+
+        async function loginWithPassword() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const data = await makeRequest('/api/v1/login', 'POST', {
+                    login: username,
+                    password: password
+                });
+                currentJwt = data.jwt;
+                showAppInterface();
+            } catch (error) {
+                document.getElementById('authError').textContent = error.message;
+            }
+        }
+
+        async function loginWithJWT() {
+            const jwt = document.getElementById('jwtInput').value.trim();
+
+            try {
+                const data = await makeRequest('/api/v1/login', 'POST', { jwt });
+                currentJwt = data.jwt;
+                showAppInterface();
+            } catch (error) {
+                document.getElementById('authError').textContent = error.message;
+            }
+        }
+
+        function showAppInterface() {
+            document.getElementById('authSection').classList.add('hidden');
+            document.getElementById('mainInterface').classList.remove('hidden');
+            document.getElementById('jwtToken').textContent = currentJwt;
+            loadExpressions();
+        }
+
+        async function loadExpressions() {
+            try {
+                const data = await makeRequest('/api/v1/expressions', 'GET');
+                const items = Array.isArray(data) ? data : data.expressions || [];
+                
+                document.getElementById('expressionsList').innerHTML = items.map(item => `
+                    <div class="expression-item">
+                        ID: ${item.id} • 
+                        <span class="status ${item.status?.replace(/\s+/g, '-') || 'unknown'}">
+                            ${item.status || 'unknown'}
+                        </span> • 
+                        ${item.result !== undefined ? `Результат: ${item.result}` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        async function submitExpression() {
+            const expr = document.getElementById('expression').value;
+            
+            try {
+                const data = await makeRequest('/api/v1/calculate', 'POST', {
+                    expression: expr
+                });
+                document.getElementById('submitResult').textContent = `Отправлено. ID: ${data.id}`;
+                loadExpressions();
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+        
+        async function searchById() {
+            const id = document.getElementById('searchId').value.trim();
+
+            try {
+                const data = await makeRequest(`/api/v1/expressions/:${id}`, 'GET');
+                const items = Array.isArray(data) ? data : data.expressions || [];
+                
+                document.getElementById('expressionsList').innerHTML = items.map(item => `
+                    <div class="expression-item">
+                        ID: ${item.id} • 
+                        <span class="status ${item.status?.replace(/\s+/g, '-') || 'unknown'}">
+                            ${item.status || 'unknown'}
+                        </span> • 
+                        ${item.result !== undefined ? `Результат: ${item.result}` : ''}
+                    </div>
+                `).join('');
+            } catch (error) {
+                alert(error.message);
+            }
+        }
+
+    </script>
+</body>
+</html>
